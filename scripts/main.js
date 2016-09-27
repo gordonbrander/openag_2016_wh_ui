@@ -30189,11 +30189,12 @@ var view = exports.view = function view(model, address, className) {
     type: 'range',
     min: model.min,
     max: model.max,
-    value: model.desired,
+    value: model.value,
     step: model.step,
     disabled: model.control.isDisabled ? true : void 0,
     onChange: function onChange(event) {
-      return address(decodeChangeEvent(event));
+      event.preventDefault();
+      address(decodeChangeEvent(event));
     },
     onFocus: onFocus(address),
     onBlur: onBlur(address)
@@ -33775,7 +33776,7 @@ var initForType = function initForType(_ref) {
     return Toggle.init(id, url, title);
   } else if (type === PWM) {
     var _url = templateTopicUrl(api, topic);
-    return Slider.initPwm(id, _url, title, 0.5);
+    return Slider.initPwm(id, _url, title, 0.0);
   } else {
     throw Error('Module type ' + type + ' not supported by Control module');
   }
