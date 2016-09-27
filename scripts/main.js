@@ -27346,6 +27346,10 @@ var _nav = require('./app/nav');
 
 var AppNav = _interopRequireWildcard(_nav);
 
+var _settings = require('./app/settings');
+
+var Settings = _interopRequireWildcard(_settings);
+
 var _environments = require('./environments');
 
 var Environments = _interopRequireWildcard(_environments);
@@ -27360,7 +27364,7 @@ var Recipes = _interopRequireWildcard(_recipes);
 
 var _firstTimeUse = require('./first-time-use');
 
-var Settings = _interopRequireWildcard(_firstTimeUse);
+var FirstTimeUse = _interopRequireWildcard(_firstTimeUse);
 
 var _functional = require('./lang/functional');
 
@@ -27400,8 +27404,8 @@ var TagFirstTimeUse = function TagFirstTimeUse(action) {
   return action.type === 'NotifySubmit' ? ConfigureFirstTime(action.form) : (0, _prelude.tagged)('FirstTimeUse', action);
 };
 
-var OpenFirstTimeUse = TagFirstTimeUse(Settings.Open);
-var CloseFirstTimeUse = TagFirstTimeUse(Settings.Close);
+var OpenFirstTimeUse = TagFirstTimeUse(FirstTimeUse.Open);
+var CloseFirstTimeUse = TagFirstTimeUse(FirstTimeUse.Close);
 
 var TagPersistence = function TagPersistence(action) {
   return action.type === 'NotifyRestore' ? Configure(action.value) :
@@ -27446,7 +27450,7 @@ var SetRecipeForEnvironment = (0, _functional.compose)(EnvironmentAction, Enviro
 var ActivateEnvironmentState = (0, _functional.compose)(EnvironmentAction, Environment.ActivateState);
 
 var TagAppNav = function TagAppNav(action) {
-  return action.type === 'ActivateState' ? ActivateState(action.id) : AppNavAction(action);
+  return action.type === 'ActivateState' ? ActivateState(action.id) : action.type === 'ToggleSettings' ? ToggleSettings : AppNavAction(action);
 };
 
 var AppNavAction = function AppNavAction(action) {
@@ -27457,6 +27461,15 @@ var AppNavAction = function AppNavAction(action) {
 };
 
 var ActivateAppNavState = (0, _functional.compose)(AppNavAction, AppNav.ActivateState);
+
+var TagSettings = function TagSettings(action) {
+  return {
+    type: 'Settings',
+    source: action
+  };
+};
+
+var ToggleSettings = TagSettings(Settings.Toggle);
 
 // Action sent to configure top level app state.
 // Driven by AppNav.Activate actions.
@@ -27540,6 +27553,13 @@ var init = exports.init = function init() {
   var appNav = _AppNav$init2[0];
   var appNavFx = _AppNav$init2[1];
 
+  var _Settings$init = Settings.init();
+
+  var _Settings$init2 = _slicedToArray(_Settings$init, 2);
+
+  var settings = _Settings$init2[0];
+  var settingsFx = _Settings$init2[1];
+
   var _Banner$init = Banner.init();
 
   var _Banner$init2 = _slicedToArray(_Banner$init, 2);
@@ -27547,12 +27567,12 @@ var init = exports.init = function init() {
   var banner = _Banner$init2[0];
   var bannerFx = _Banner$init2[1];
 
-  var _Settings$init = Settings.init();
+  var _FirstTimeUse$init = FirstTimeUse.init();
 
-  var _Settings$init2 = _slicedToArray(_Settings$init, 2);
+  var _FirstTimeUse$init2 = _slicedToArray(_FirstTimeUse$init, 2);
 
-  var firstTimeUse = _Settings$init2[0];
-  var firstTimeUseFx = _Settings$init2[1];
+  var firstTimeUse = _FirstTimeUse$init2[0];
+  var firstTimeUseFx = _FirstTimeUse$init2[1];
 
 
   return [{
@@ -27574,13 +27594,14 @@ var init = exports.init = function init() {
     environments: environments,
     recipes: recipes,
     appNav: appNav,
+    settings: settings,
     banner: banner,
     firstTimeUse: firstTimeUse
-  }, _reflex.Effects.batch([_reflex.Effects.receive(GetState), environmentFx.map(TagEnvironment), environmentsFx.map(TagEnvironments), recipesFx.map(TagRecipes), appNavFx.map(TagAppNav), bannerFx.map(TagBanner), firstTimeUseFx.map(TagFirstTimeUse)])];
+  }, _reflex.Effects.batch([_reflex.Effects.receive(GetState), environmentFx.map(TagEnvironment), environmentsFx.map(TagEnvironments), recipesFx.map(TagRecipes), appNavFx.map(TagAppNav), settingsFx.map(TagSettings), bannerFx.map(TagBanner), firstTimeUseFx.map(TagFirstTimeUse)])];
 };
 
 var update = exports.update = function update(model, action) {
-  return action.type === 'Environment' ? updateEnvironment(model, action.source) : action.type === 'Recipes' ? updateRecipes(model, action.source) : action.type === 'AppNav' ? updateAppNav(model, action.source) : action.type === 'Banner' ? updateBanner(model, action.source) : action.type === 'Persistence' ? updatePersistence(model, action.source) : action.type === 'FirstTimeUse' ? updateFirstTimeUse(model, action.source) : action.type === 'Environments' ? updateEnvironments(model, action.source) :
+  return action.type === 'Environment' ? updateEnvironment(model, action.source) : action.type === 'Recipes' ? updateRecipes(model, action.source) : action.type === 'AppNav' ? updateAppNav(model, action.source) : action.type === 'Settings' ? updateSettings(model, action.source) : action.type === 'Banner' ? updateBanner(model, action.source) : action.type === 'Persistence' ? updatePersistence(model, action.source) : action.type === 'FirstTimeUse' ? updateFirstTimeUse(model, action.source) : action.type === 'Environments' ? updateEnvironments(model, action.source) :
 
   // Specialized update functions
   action.type === 'ActivateState' ? activateState(model, action.id) : action.type === 'Configure' ? configure(model, action.value) : action.type === 'ConfigureFirstTime' ? configureFirstTime(model, action.form) : action.type === 'StartRecipe' ? startRecipe(model, action.id, action.name) : action.type === 'PostRecipe' ? postRecipe(model, action.environmentID, action.recipeID) : action.type === 'RecipePosted' ? action.result.isOk ? recipePostedOk(model, action.result.value) : recipePostedError(model, action.result.error) : action.type === 'SaveState' ? saveState(model) : Unknown.update(model, action);
@@ -27598,7 +27619,7 @@ var updateFirstTimeUse = (0, _cursor.cursor)({
   set: function set(model, firstTimeUse) {
     return (0, _prelude.merge)(model, { firstTimeUse: firstTimeUse });
   },
-  update: Settings.update,
+  update: FirstTimeUse.update,
   tag: TagFirstTimeUse
 });
 
@@ -27611,6 +27632,17 @@ var updateAppNav = (0, _cursor.cursor)({
   },
   update: AppNav.update,
   tag: TagAppNav
+});
+
+var updateSettings = (0, _cursor.cursor)({
+  get: function get(model) {
+    return model.settings;
+  },
+  set: function set(model, settings) {
+    return (0, _prelude.merge)(model, { settings: settings });
+  },
+  update: Settings.update,
+  tag: TagSettings
 });
 
 var updateBanner = (0, _cursor.cursor)({
@@ -27761,22 +27793,22 @@ var view = exports.view = function view(model, address) {
 var viewFTU = function viewFTU(model, address) {
   return _reflex.html.div({
     className: 'app-main'
-  }, [(0, _reflex.thunk)('first-time-use', Settings.viewFTU, model.firstTimeUse, (0, _reflex.forward)(address, TagFirstTimeUse))]);
+  }, [(0, _reflex.thunk)('first-time-use', FirstTimeUse.viewFTU, model.firstTimeUse, (0, _reflex.forward)(address, TagFirstTimeUse))]);
 };
 
 var viewConfigured = function viewConfigured(model, address) {
   return _reflex.html.div({
     className: 'app-main app-main--ready'
-  }, [(0, _reflex.thunk)('app-nav', AppNav.view, model.appNav, (0, _reflex.forward)(address, TagAppNav)), (0, _reflex.thunk)('banner', Banner.view, model.banner, (0, _reflex.forward)(address, TagBanner), 'global-banner'), (0, _reflex.thunk)('environment', Environment.view, model.environment, (0, _reflex.forward)(address, TagEnvironment)), (0, _reflex.thunk)('recipes', Recipes.view, model.recipes, (0, _reflex.forward)(address, TagRecipes))]);
+  }, [(0, _reflex.thunk)('app-nav', AppNav.view, model.appNav, (0, _reflex.forward)(address, TagAppNav)), (0, _reflex.thunk)('settings', Settings.view, model.settings, (0, _reflex.forward)(address, TagSettings)), (0, _reflex.thunk)('banner', Banner.view, model.banner, (0, _reflex.forward)(address, TagBanner), 'global-banner'), (0, _reflex.thunk)('environment', Environment.view, model.environment, (0, _reflex.forward)(address, TagEnvironment)), (0, _reflex.thunk)('recipes', Recipes.view, model.recipes, (0, _reflex.forward)(address, TagRecipes))]);
 };
 
-},{"../openag-config.json":207,"../package.json":208,"./app/nav":210,"./common/banner":212,"./common/cursor":215,"./common/lang":222,"./common/prelude":226,"./common/request":227,"./common/stache":232,"./common/unknown":235,"./common/url":236,"./environment":241,"./environments":259,"./first-time-use":260,"./lang/functional":261,"./persistence":264,"./recipes":266,"reflex":178}],210:[function(require,module,exports){
+},{"../openag-config.json":207,"../package.json":208,"./app/nav":210,"./app/settings":211,"./common/banner":213,"./common/cursor":216,"./common/lang":223,"./common/prelude":227,"./common/request":228,"./common/stache":233,"./common/unknown":236,"./common/url":237,"./environment":242,"./environments":260,"./first-time-use":261,"./lang/functional":262,"./persistence":265,"./recipes":267,"reflex":178}],210:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.active = exports.view = exports.update = exports.init = exports.Configure = exports.ActivateState = exports.CONTROLS = exports.CHART = exports.DASHBOARD = undefined;
+exports.active = exports.view = exports.update = exports.init = exports.Configure = exports.ActivateState = exports.ToggleSettings = exports.CONTROLS = exports.CHART = exports.DASHBOARD = undefined;
 
 var _reflex = require('reflex');
 
@@ -27797,6 +27829,8 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 var DASHBOARD = exports.DASHBOARD = 'dashboard';
 var CHART = exports.CHART = 'chart';
 var CONTROLS = exports.CONTROLS = 'controls';
+
+var ToggleSettings = exports.ToggleSettings = { type: 'ToggleSettings' };
 
 var ActivateState = exports.ActivateState = function ActivateState(id) {
   return {
@@ -27873,7 +27907,17 @@ var view = exports.view = function view(model, address) {
       'nav-ctl-icon-active': model.active === CONTROLS
     }),
     title: (0, _lang.localize)('Manual Controls')
-  }, [(0, _lang.localize)('Manual Controls')])])]);
+  }, [(0, _lang.localize)('Manual Controls')]), _reflex.html.a({
+    onClick: function onClick(event) {
+      event.preventDefault();
+      address(ToggleSettings);
+    },
+    className: (0, _attr.classed)({
+      'ir': true,
+      'nav-hamburger-icon': true,
+      'nav-hamburger-icon--active': model.isHamburgerActive
+    })
+  })])]);
 };
 
 // Utilities
@@ -27882,7 +27926,142 @@ var active = exports.active = function active(model) {
   return model.active;
 };
 
-},{"../common/attr":211,"../common/lang":222,"../common/prelude":226,"../common/unknown":235,"reflex":178}],211:[function(require,module,exports){
+},{"../common/attr":212,"../common/lang":223,"../common/prelude":227,"../common/unknown":236,"reflex":178}],211:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.view = exports.update = exports.init = exports.Toggle = exports.Close = exports.Open = exports.TagModal = exports.RefreshApp = exports.ResetApp = undefined;
+
+var _openagConfig = require('../../openag-config.json');
+
+var _reflex = require('reflex');
+
+var _pouchdbBrowser = require('pouchdb-browser');
+
+var _pouchdbBrowser2 = _interopRequireDefault(_pouchdbBrowser);
+
+var _prelude = require('../common/prelude');
+
+var _cursor = require('../common/cursor');
+
+var _modal = require('../common/modal');
+
+var Modal = _interopRequireWildcard(_modal);
+
+var _unknown = require('../common/unknown');
+
+var _attr = require('../common/attr');
+
+var _lang = require('../common/lang');
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+// Actions
+
+var ResetApp = exports.ResetApp = {
+  type: 'ResetApp'
+};
+
+var RefreshApp = exports.RefreshApp = { type: 'RefreshApp' };
+var AlwaysRefresh = function AlwaysRefresh() {
+  return RefreshApp;
+};
+
+var NoOp = { type: 'NoOp' };
+
+var TagModal = exports.TagModal = function TagModal(action) {
+  return {
+    type: 'Modal',
+    source: action
+  };
+};
+
+var Open = exports.Open = TagModal(Modal.Open);
+var Close = exports.Close = TagModal(Modal.Close);
+var Toggle = exports.Toggle = TagModal(Modal.Toggle);
+
+// Init, update
+
+var init = exports.init = function init() {
+  var next = {
+    isOpen: false
+  };
+
+  return [next, _reflex.Effects.none];
+};
+
+var update = exports.update = function update(model, action) {
+  return action.type === 'Modal' ? updateModal(model, action.source) : action.type === 'ResetApp' ? resetApp(model) : action.type === 'RefreshApp' ? refreshApp(model) : action.type === 'NoOp' ? [model, _reflex.Effects.none] : (0, _unknown.update)(model, action);
+};
+
+var updateModal = (0, _cursor.cursor)({
+  get: function get(model) {
+    return model;
+  },
+  set: function set(model, patch) {
+    return (0, _prelude.merge)(model, patch);
+  },
+  update: Modal.update,
+  tag: TagModal
+});
+
+var resetApp = function resetApp(model) {
+  var task = new _reflex.Task(function (succeed) {
+    // Create a pouchDB instance (the database already exists, but we need
+    // an interface to it that will kill it).
+    var db = new _pouchdbBrowser2.default(_openagConfig.app.local);
+    db.destroy().then(succeed);
+  });
+  // Map task to refresh action. When db finishes deleting, it will trigger
+  // an app refresh.
+  var fx = _reflex.Effects.perform(task).map(AlwaysRefresh);
+  return [model, fx];
+};
+
+var refreshApp = function refreshApp(model) {
+  var task = new _reflex.Task(function (succeed) {
+    document.location.reload(true);
+    succeed(NoOp);
+  });
+  return [model, _reflex.Effects.perform(task)];
+};
+
+// View
+
+var view = exports.view = function view(model, address) {
+  return _reflex.html.div({
+    className: (0, _attr.classed)({
+      'dropdown': true,
+      'dropdown--close': !model.isOpen
+    }),
+    hidden: !model.isOpen ? 'hidden' : void 0
+  }, [_reflex.html.div({
+    className: 'dropdown-overlay',
+    onClick: function onClick() {
+      return address(Close);
+    }
+  }), _reflex.html.div({
+    className: 'dropdown-main',
+    style: {
+      top: '66px',
+      right: '12px'
+    }
+  }, [_reflex.html.ul({
+    className: 'menu-list'
+  }, [_reflex.html.li(null, [_reflex.html.a({
+    className: 'menu-list--destructive',
+    onClick: function onClick(event) {
+      event.preventDefault();
+      address(ResetApp);
+    }
+  }, ['Reset App'])])])])]);
+};
+
+},{"../../openag-config.json":207,"../common/attr":212,"../common/cursor":216,"../common/lang":223,"../common/modal":225,"../common/prelude":227,"../common/unknown":236,"pouchdb-browser":148,"reflex":178}],212:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -27926,7 +28105,7 @@ var toggle = exports.toggle = function toggle(isPresent, attrValue) {
   );
 };
 
-},{}],212:[function(require,module,exports){
+},{}],213:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -28085,7 +28264,7 @@ var view = exports.view = function view(model, address, className) {
   }, [(0, _lang.localize)('Refresh')])]);
 };
 
-},{"../common/attr":211,"../common/lang":222,"../common/prelude":226,"../common/unknown":235,"reflex":178}],213:[function(require,module,exports){
+},{"../common/attr":212,"../common/lang":223,"../common/prelude":227,"../common/unknown":236,"reflex":178}],214:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -28292,7 +28471,7 @@ var view = exports.view = function view(model, address, className) {
   }, [model.label]);
 };
 
-},{"../common/attr":211,"../common/control":214,"../common/focusable":219,"../common/prelude":226,"../common/target":233,"../common/unknown":235,"reflex":178}],214:[function(require,module,exports){
+},{"../common/attr":212,"../common/control":215,"../common/focusable":220,"../common/prelude":227,"../common/target":234,"../common/unknown":236,"reflex":178}],215:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -28361,7 +28540,7 @@ var toggle = exports.toggle = function toggle(model) {
   return [model.isDisabled ? Model.enabled : Model.disabled, _reflex.Effects.none];
 };
 
-},{"../common/prelude":226,"../common/unknown":235,"reflex":178}],215:[function(require,module,exports){
+},{"../common/prelude":227,"../common/unknown":236,"reflex":178}],216:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -28409,7 +28588,7 @@ exports.cursor = function cursor(config /*:Cursor*/) /*:(model:from, action:in) 
   };
 };
 
-},{"reflex":178}],216:[function(require,module,exports){
+},{"reflex":178}],217:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -28566,7 +28745,7 @@ var sync = exports.sync = function sync(db, replica) {
   }));
 };
 
-},{"../common/result":228,"../lang/functional":261,"reflex":178}],217:[function(require,module,exports){
+},{"../common/result":229,"../lang/functional":262,"reflex":178}],218:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -28642,7 +28821,7 @@ var drag = exports.drag = function drag(model, coords) {
   return update(model, Drag(coords));
 };
 
-},{"../common/unknown":235,"reflex":178}],218:[function(require,module,exports){
+},{"../common/unknown":236,"reflex":178}],219:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -28756,7 +28935,7 @@ var readSelection = exports.readSelection = function readSelection(input) {
   return new Selection(input.selectionStart, input.selectionEnd, input.selectionDirection || 'none');
 };
 
-},{"../common/unknown":235,"reflex":178}],219:[function(require,module,exports){
+},{"../common/unknown":236,"reflex":178}],220:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -28823,7 +29002,7 @@ var blur = exports.blur = function blur(model) {
 var onFocus = exports.onFocus = (0, _prelude.port)((0, _functional.constant)(Focus));
 var onBlur = exports.onBlur = (0, _prelude.port)((0, _functional.constant)(Blur));
 
-},{"../common/prelude":226,"../common/unknown":235,"../lang/functional":261,"reflex":178}],220:[function(require,module,exports){
+},{"../common/prelude":227,"../common/unknown":236,"../lang/functional":262,"reflex":178}],221:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -29030,7 +29209,7 @@ var updateWithID = exports.updateWithID = function updateWithID(update, tag, mod
   }
 };
 
-},{"../common/prelude":226,"../common/unknown":235,"../lang/functional":261,"reflex":178}],221:[function(require,module,exports){
+},{"../common/prelude":227,"../common/unknown":236,"../lang/functional":262,"reflex":178}],222:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -29241,7 +29420,7 @@ var onSelect = exports.onSelect = (0, _prelude.annotate)(Edit.onSelect, EditActi
 var onFocus = exports.onFocus = (0, _prelude.annotate)(Focus.onFocus, FocusAction);
 var onBlur = exports.onBlur = (0, _prelude.annotate)(Focus.onBlur, FocusAction);
 
-},{"../common/control":214,"../common/editable":218,"../common/focusable":219,"../common/prelude":226,"../common/unknown":235,"../lang/functional":261,"reflex":178}],222:[function(require,module,exports){
+},{"../common/control":215,"../common/editable":219,"../common/focusable":220,"../common/prelude":227,"../common/unknown":236,"../lang/functional":262,"reflex":178}],223:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -29261,7 +29440,7 @@ var localizeTemplate = exports.localizeTemplate = function localizeTemplate(text
   return (0, _stache.render)(text, context);
 };
 
-},{"../common/stache":232}],223:[function(require,module,exports){
+},{"../common/stache":233}],224:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -29287,13 +29466,13 @@ var mapOr = exports.mapOr = function mapOr(v, a2b, fallback) {
   return or(map(v, a2b), fallback);
 };
 
-},{}],224:[function(require,module,exports){
+},{}],225:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.update = exports.close = exports.open = exports.Close = exports.Open = undefined;
+exports.update = exports.close = exports.open = exports.Toggle = exports.Close = exports.Open = undefined;
 
 var _reflex = require('reflex');
 
@@ -29312,6 +29491,10 @@ var Close = exports.Close = {
   type: 'Close'
 };
 
+var Toggle = exports.Toggle = {
+  type: 'Toggle'
+};
+
 var open = exports.open = function open(model) {
   return update(model, Open);
 };
@@ -29321,10 +29504,10 @@ var close = exports.close = function close(model) {
 };
 
 var update = exports.update = function update(model, action) {
-  return action.type === 'Open' ? [(0, _prelude.merge)(model, { isOpen: true }), _reflex.Effects.none] : action.type === 'Close' ? [(0, _prelude.merge)(model, { isOpen: false }), _reflex.Effects.none] : Unknown.update(model, action);
+  return action.type === 'Open' ? [(0, _prelude.merge)(model, { isOpen: true }), _reflex.Effects.none] : action.type === 'Close' ? [(0, _prelude.merge)(model, { isOpen: false }), _reflex.Effects.none] : action.type === 'Toggle' ? [(0, _prelude.merge)(model, { isOpen: !model.isOpen }), _reflex.Effects.none] : Unknown.update(model, action);
 };
 
-},{"../common/prelude":226,"../common/unknown":235,"reflex":178}],225:[function(require,module,exports){
+},{"../common/prelude":227,"../common/unknown":236,"reflex":178}],226:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -29408,7 +29591,7 @@ var readValue = exports.readValue = function readValue(option) {
   return option.value;
 };
 
-},{"../common/attr":211,"../common/control":214,"../common/unknown":235,"reflex":178}],226:[function(require,module,exports){
+},{"../common/attr":212,"../common/control":215,"../common/unknown":236,"reflex":178}],227:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -29528,7 +29711,7 @@ var annotate = exports.annotate = function annotate(port, tag) {
   };
 };
 
-},{"reflex":178}],227:[function(require,module,exports){
+},{"reflex":178}],228:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -29641,7 +29824,7 @@ var post = exports.post = function post(url, body) {
   }));
 };
 
-},{"../common/lang":222,"../common/prelude":226,"../common/result":228,"../lang/functional":261,"reflex":178,"whatwg-fetch":205}],228:[function(require,module,exports){
+},{"../common/lang":223,"../common/prelude":227,"../common/result":229,"../lang/functional":262,"reflex":178,"whatwg-fetch":205}],229:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -29689,7 +29872,7 @@ var updater = exports.updater = function updater(ok, error) {
   };
 };
 
-},{}],229:[function(require,module,exports){
+},{}],230:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -29714,7 +29897,7 @@ var Env = function Env() {
 
 var env = exports.env = Env();
 
-},{"querystring":166}],230:[function(require,module,exports){
+},{"querystring":166}],231:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -29848,7 +30031,7 @@ var readValue = exports.readValue = function readValue(model) {
   return model.value;
 };
 
-},{"../common/attr":211,"../common/option":225,"../common/prelude":226,"../common/unknown":235,"reflex":178}],231:[function(require,module,exports){
+},{"../common/attr":212,"../common/option":226,"../common/prelude":227,"../common/unknown":236,"reflex":178}],232:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -30024,7 +30207,7 @@ var decodeChangeEvent = exports.decodeChangeEvent = function decodeChangeEvent(e
 var onFocus = exports.onFocus = (0, _prelude.annotate)(Focus.onFocus, FocusAction);
 var onBlur = exports.onBlur = (0, _prelude.annotate)(Focus.onBlur, FocusAction);
 
-},{"../common/control":214,"../common/editable":218,"../common/focusable":219,"../common/prelude":226,"../common/unknown":235,"../lang/functional":261,"reflex":178}],232:[function(require,module,exports){
+},{"../common/control":215,"../common/editable":219,"../common/focusable":220,"../common/prelude":227,"../common/unknown":236,"../lang/functional":262,"reflex":178}],233:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -30057,7 +30240,7 @@ var render = exports.render = function render(string, context) {
   });
 };
 
-},{}],233:[function(require,module,exports){
+},{}],234:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -30124,7 +30307,7 @@ var out = exports.out = function out(model) {
 var onMouseOver = exports.onMouseOver = (0, _prelude.port)((0, _functional.constant)(Over));
 var onMouseOut = exports.onMouseOut = (0, _prelude.port)((0, _functional.constant)(Out));
 
-},{"../common/prelude":226,"../common/unknown":235,"../lang/functional":261,"reflex":178}],234:[function(require,module,exports){
+},{"../common/prelude":227,"../common/unknown":236,"../lang/functional":262,"reflex":178}],235:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -30195,7 +30378,7 @@ var view = exports.view = function view(model, address) {
   );
 };
 
-},{"../common/attr":211,"../common/unknown":235,"reflex":178}],235:[function(require,module,exports){
+},{"../common/attr":212,"../common/unknown":236,"reflex":178}],236:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -30259,7 +30442,7 @@ exports.update = function update(model /*:model*/, action /*:action*/) /*:[model
   return [model, _reflex.Effects.none];
 };
 
-},{"reflex":178}],236:[function(require,module,exports){
+},{"reflex":178}],237:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -30307,7 +30490,7 @@ var readRootUrl = exports.readRootUrl = function readRootUrl(string) {
   return rootUrl;
 };
 
-},{}],237:[function(require,module,exports){
+},{}],238:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -30626,7 +30809,7 @@ var readValue = exports.readValue = function readValue(model) {
   return model.edit.value;
 };
 
-},{"../common/attr":211,"../common/control":214,"../common/editable":218,"../common/focusable":219,"../common/prelude":226,"../common/unknown":235,"../lang/functional":261,"reflex":178}],238:[function(require,module,exports){
+},{"../common/attr":212,"../common/control":215,"../common/editable":219,"../common/focusable":220,"../common/prelude":227,"../common/unknown":236,"../lang/functional":262,"reflex":178}],239:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -30753,7 +30936,7 @@ var view = exports.view = function view(model, address) {
   return model.Debuggee.view(model.debuggee, (0, _reflex.forward)(address, TagDebuggee));
 };
 
-},{"./common/cursor":215,"./common/prelude":226,"./common/runtime":229,"./common/unknown":235,"./devtools/log":239,"reflex":178}],239:[function(require,module,exports){
+},{"./common/cursor":216,"./common/prelude":227,"./common/runtime":230,"./common/unknown":236,"./devtools/log":240,"reflex":178}],240:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -30802,7 +30985,7 @@ var log = function log(model, action) {
   return [model, _reflex.Effects.none];
 };
 
-},{"../common/unknown":235,"reflex":178}],240:[function(require,module,exports){
+},{"../common/unknown":236,"reflex":178}],241:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -31141,7 +31324,7 @@ var forceReplace = exports.forceReplace = function forceReplace(query, element) 
   });
 };
 
-},{"reflex":178,"reflex-virtual-dom-driver":170}],241:[function(require,module,exports){
+},{"reflex":178,"reflex-virtual-dom-driver":170}],242:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -31619,7 +31802,7 @@ var templateChangesUrl = function templateChangesUrl(origin) {
   });
 };
 
-},{"../openag-config.json":207,"./common/attr":211,"./common/cursor":215,"./common/prelude":226,"./common/request":227,"./common/result":228,"./common/stache":232,"./common/unknown":235,"./environment/chart":242,"./environment/controls":248,"./environment/dashboard":252,"./environment/datapoints":254,"./lang/functional":261,"reflex":178}],242:[function(require,module,exports){
+},{"../openag-config.json":207,"./common/attr":212,"./common/cursor":216,"./common/prelude":227,"./common/request":228,"./common/result":229,"./common/stache":233,"./common/unknown":236,"./environment/chart":243,"./environment/controls":249,"./environment/dashboard":253,"./environment/datapoints":255,"./lang/functional":262,"reflex":178}],243:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -31823,7 +32006,7 @@ var readRecipeName = function readRecipeName(recipe) {
   return recipe.name ? recipe.name : recipe.value;
 };
 
-},{"../common/cursor":215,"../common/prelude":226,"../common/unknown":235,"../environment/exporter":255,"../environment/toolbox":258,"../lang/functional":261,"./chart/chart":243,"./chart/sidebar":247,"./datapoints":254,"reflex":178}],243:[function(require,module,exports){
+},{"../common/cursor":216,"../common/prelude":227,"../common/unknown":236,"../environment/exporter":256,"../environment/toolbox":259,"../lang/functional":262,"./chart/chart":244,"./chart/sidebar":248,"./datapoints":255,"reflex":178}],244:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -32496,7 +32679,7 @@ var secondsNow = function secondsNow() {
   return Date.now() / 1000;
 };
 
-},{"../../../openag-config.json":207,"../../common/attr":211,"../../common/cursor":215,"../../common/draggable":217,"../../common/indexed":220,"../../common/lang":222,"../../common/maybe":223,"../../common/prelude":226,"../../common/unknown":235,"../../driver/virtual-dom":240,"../../lang/functional":261,"../../lang/number":262,"../datapoints":254,"./fixed-buffer":244,"./line-group":245,"./series":246,"d3-array":6,"d3-scale":12,"d3-shape":13,"d3-time":15,"d3-time-format":14,"reflex":178}],244:[function(require,module,exports){
+},{"../../../openag-config.json":207,"../../common/attr":212,"../../common/cursor":216,"../../common/draggable":218,"../../common/indexed":221,"../../common/lang":223,"../../common/maybe":224,"../../common/prelude":227,"../../common/unknown":236,"../../driver/virtual-dom":241,"../../lang/functional":262,"../../lang/number":263,"../datapoints":255,"./fixed-buffer":245,"./line-group":246,"./series":247,"d3-array":6,"d3-scale":12,"d3-shape":13,"d3-time":15,"d3-time-format":14,"reflex":178}],245:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -32598,7 +32781,7 @@ var trimMut = function trimMut(buffer, limit) {
   return buffer;
 };
 
-},{}],245:[function(require,module,exports){
+},{}],246:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -32693,7 +32876,7 @@ LineGroup.calcLength = function (group) {
   return _fixedBuffer.FixedBuffer.values(group.measured).length + _fixedBuffer.FixedBuffer.values(group.desired).length;
 };
 
-},{"../datapoints":254,"./fixed-buffer":244,"lodash/last":131}],246:[function(require,module,exports){
+},{"../datapoints":255,"./fixed-buffer":245,"lodash/last":131}],247:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -32896,7 +33079,7 @@ var readConfigVariable = function readConfigVariable(config) {
   return config.variable;
 };
 
-},{"../../common/maybe":223,"./fixed-buffer":244,"./line-group":245,"lodash/last":131,"lodash/zipObject":138}],247:[function(require,module,exports){
+},{"../../common/maybe":224,"./fixed-buffer":245,"./line-group":246,"lodash/last":131,"lodash/zipObject":138}],248:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -33048,7 +33231,7 @@ var view = exports.view = function view(model, address) {
   }, [(0, _reflex.thunk)('sidebar-marker-button', Button.view, model.markerButton, (0, _reflex.forward)(address, TagMarkerButton), 'btn-secondary btn-secondary--full-width')])])]);
 };
 
-},{"../../common/button":213,"../../common/cursor":215,"../../common/lang":222,"../../common/prelude":226,"../../common/unknown":235,"../../lang/functional":261,"../sidebar/air-temperature":256,"../sidebar/recipe":257,"reflex":178}],248:[function(require,module,exports){
+},{"../../common/button":214,"../../common/cursor":216,"../../common/lang":223,"../../common/prelude":227,"../../common/unknown":236,"../../lang/functional":262,"../sidebar/air-temperature":257,"../sidebar/recipe":258,"reflex":178}],249:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -33189,7 +33372,7 @@ var view = exports.view = function view(model, address) {
   }));
 };
 
-},{"../../openag-config.json":207,"../common/cursor":215,"../common/lang":222,"../common/prelude":226,"../common/unknown":235,"../lang/functional":261,"./controls/control":251,"reflex":178}],249:[function(require,module,exports){
+},{"../../openag-config.json":207,"../common/cursor":216,"../common/lang":223,"../common/prelude":227,"../common/unknown":236,"../lang/functional":262,"./controls/control":252,"reflex":178}],250:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -33342,7 +33525,7 @@ var view = exports.view = function view(model, address) {
   }, [model.title]), Slider.view(model.slider, (0, _reflex.forward)(address, TagSlider), 'slider actuator-slider')]);
 };
 
-},{"../../../openag-config.json":207,"../../common/prelude":226,"../../common/request":227,"../../common/slider":231,"../../common/stache":232,"../../common/unknown":235,"../../lang/functional":261,"reflex":178}],250:[function(require,module,exports){
+},{"../../../openag-config.json":207,"../../common/prelude":227,"../../common/request":228,"../../common/slider":232,"../../common/stache":233,"../../common/unknown":236,"../../lang/functional":262,"reflex":178}],251:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -33492,7 +33675,7 @@ var view = exports.view = function view(model, address) {
   }, [model.title]), Toggle.view(model.toggle, (0, _reflex.forward)(address, TagToggle), 'toggle actuator-toggle')]);
 };
 
-},{"../../../openag-config.json":207,"../../common/cursor":215,"../../common/prelude":226,"../../common/request":227,"../../common/toggle":234,"../../common/unknown":235,"../../lang/functional":261,"reflex":178}],251:[function(require,module,exports){
+},{"../../../openag-config.json":207,"../../common/cursor":216,"../../common/prelude":227,"../../common/request":228,"../../common/toggle":235,"../../common/unknown":236,"../../lang/functional":262,"reflex":178}],252:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -33606,7 +33789,7 @@ var templateTopicUrl = function templateTopicUrl(api, topic) {
   return (0, _stache.render)(topic, { api: api });
 };
 
-},{"../../common/prelude":226,"../../common/stache":232,"../../common/unknown":235,"./actuator-slider":249,"./actuator-toggle":250,"reflex":178}],252:[function(require,module,exports){
+},{"../../common/prelude":227,"../../common/stache":233,"../../common/unknown":236,"./actuator-slider":250,"./actuator-toggle":251,"reflex":178}],253:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -33820,7 +34003,7 @@ var templateVideoUrl = function templateVideoUrl(model) {
   });
 };
 
-},{"../../openag-config":207,"../common/lang":222,"../common/stache":232,"../common/unknown":235,"../lang/functional":261,"./dashboard/sidebar":253,"reflex":178}],253:[function(require,module,exports){
+},{"../../openag-config":207,"../common/lang":223,"../common/stache":233,"../common/unknown":236,"../lang/functional":262,"./dashboard/sidebar":254,"reflex":178}],254:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -33940,7 +34123,7 @@ var view = exports.view = function view(model, address) {
   }, [(0, _reflex.thunk)('chart-sidebar-air-temperature', AirTemperature.view, model.airTemperature, (0, _reflex.forward)(address, TagAirTemperature))])])]);
 };
 
-},{"../../common/cursor":215,"../../common/lang":222,"../../common/prelude":226,"../../common/unknown":235,"../../lang/functional":261,"../sidebar/air-temperature":256,"../sidebar/recipe":257,"reflex":178}],254:[function(require,module,exports){
+},{"../../common/cursor":216,"../../common/lang":223,"../../common/prelude":227,"../../common/unknown":236,"../../lang/functional":262,"../sidebar/air-temperature":257,"../sidebar/recipe":258,"reflex":178}],255:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -34064,7 +34247,7 @@ var findAirTemperature = exports.findAirTemperature = function findAirTemperatur
 // of being an array. Then only read datapoints that exist in the chart.
 // Only NumberDataPoints are supported for chart config in openag-config.json.
 
-},{"../common/maybe":223,"lodash/findLast":115}],255:[function(require,module,exports){
+},{"../common/maybe":224,"lodash/findLast":115}],256:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -34189,7 +34372,7 @@ var templateCsvUrl = function templateCsvUrl(origin, environmentID, variable) {
   });
 };
 
-},{"../../openag-config.json":207,"../common/attr":211,"../common/cursor":215,"../common/lang":222,"../common/modal":224,"../common/prelude":226,"../common/stache":232,"../common/unknown":235,"reflex":178}],256:[function(require,module,exports){
+},{"../../openag-config.json":207,"../common/attr":212,"../common/cursor":216,"../common/lang":223,"../common/modal":225,"../common/prelude":227,"../common/stache":233,"../common/unknown":236,"reflex":178}],257:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -34247,7 +34430,7 @@ var readTemperature = function readTemperature(value) {
   return Math.round(value) + '';
 };
 
-},{"../../common/unknown":235,"reflex":178}],257:[function(require,module,exports){
+},{"../../common/unknown":236,"reflex":178}],258:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -34324,7 +34507,7 @@ var readName = function readName(model) {
   return model.name ? model.name : (0, _lang.localize)('None');
 };
 
-},{"../../common/lang":222,"../../common/prelude":226,"../../common/unknown":235,"reflex":178}],258:[function(require,module,exports){
+},{"../../common/lang":223,"../../common/prelude":227,"../../common/unknown":236,"reflex":178}],259:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -34362,7 +34545,7 @@ var view = exports.view = function view(model, address) {
   }, [(0, _lang.localize)('Export CSV')])])]);
 };
 
-},{"../common/lang":222,"../common/stache":232,"reflex":178}],259:[function(require,module,exports){
+},{"../common/lang":223,"../common/stache":233,"reflex":178}],260:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -34496,7 +34679,7 @@ var readDoc = function readDoc(doc) {
   };
 };
 
-},{"../openag-config.json":207,"./common/database":216,"./common/prelude":226,"./common/stache":232,"./common/unknown":235,"pouchdb-browser":148,"reflex":178}],260:[function(require,module,exports){
+},{"../openag-config.json":207,"./common/database":217,"./common/prelude":227,"./common/stache":233,"./common/unknown":236,"pouchdb-browser":148,"reflex":178}],261:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -34973,7 +35156,7 @@ var readOptionFromRecord = function readOptionFromRecord(_ref) {
   return (0, _option.assemble)(_id, _id, _id, false);
 };
 
-},{"../openag-config.json":207,"./common/attr":211,"./common/button":213,"./common/cursor":215,"./common/database":216,"./common/lang":222,"./common/modal":224,"./common/option":225,"./common/prelude":226,"./common/request":227,"./common/result":228,"./common/select":230,"./common/stache":232,"./common/unknown":235,"./common/url":236,"./common/validator":237,"./lang/functional":261,"pouchdb-browser":148,"reflex":178}],261:[function(require,module,exports){
+},{"../openag-config.json":207,"./common/attr":212,"./common/button":214,"./common/cursor":216,"./common/database":217,"./common/lang":223,"./common/modal":225,"./common/option":226,"./common/prelude":227,"./common/request":228,"./common/result":229,"./common/select":231,"./common/stache":233,"./common/unknown":236,"./common/url":237,"./common/validator":238,"./lang/functional":262,"pouchdb-browser":148,"reflex":178}],262:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -35043,7 +35226,7 @@ var constant = exports.constant = function constant(value) {
   };
 };
 
-},{}],262:[function(require,module,exports){
+},{}],263:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -35061,7 +35244,7 @@ var round2x = exports.round2x = function round2x(float) {
   return Math.round(float * 100) / 100;
 };
 
-},{}],263:[function(require,module,exports){
+},{}],264:[function(require,module,exports){
 'use strict';
 
 var _openagConfig = require('../openag-config.json');
@@ -35097,7 +35280,7 @@ var renderer = new _reflexVirtualDomDriver.Renderer({ target: document.body });
 application.view.subscribe(renderer.address);
 application.task.subscribe(_reflex.Effects.driver(application.address));
 
-},{"../openag-config.json":207,"./app":209,"./devtools":238,"reflex":178,"reflex-virtual-dom-driver":170}],264:[function(require,module,exports){
+},{"../openag-config.json":207,"./app":209,"./devtools":239,"reflex":178,"reflex-virtual-dom-driver":170}],265:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -35281,7 +35464,7 @@ var updateMigrate = function updateMigrate(model, record) {
   return update(model, action);
 };
 
-},{"../openag-config.json":207,"../package.json":208,"./common/database":216,"./common/prelude.js":226,"./common/result":228,"./common/unknown":235,"pouchdb-browser":148,"reflex":178}],265:[function(require,module,exports){
+},{"../openag-config.json":207,"../package.json":208,"./common/database":217,"./common/prelude.js":227,"./common/result":229,"./common/unknown":236,"pouchdb-browser":148,"reflex":178}],266:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -35304,7 +35487,7 @@ var view = exports.view = function view(model, address) {
   }, [String(model._id)]);
 };
 
-},{"reflex":178}],266:[function(require,module,exports){
+},{"reflex":178}],267:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -35672,7 +35855,7 @@ var templateRecipesDatabase = function templateRecipesDatabase(origin) {
   });
 };
 
-},{"../openag-config.json":207,"./common/attr":211,"./common/banner":212,"./common/cursor":215,"./common/database":216,"./common/indexed":220,"./common/lang":222,"./common/modal":224,"./common/prelude":226,"./common/result":228,"./common/stache":232,"./common/unknown":235,"./lang/functional":261,"./recipe":265,"./recipes/form":267,"pouchdb-browser":148,"reflex":178}],267:[function(require,module,exports){
+},{"../openag-config.json":207,"./common/attr":212,"./common/banner":213,"./common/cursor":216,"./common/database":217,"./common/indexed":221,"./common/lang":223,"./common/modal":225,"./common/prelude":227,"./common/result":229,"./common/stache":233,"./common/unknown":236,"./lang/functional":262,"./recipe":266,"./recipes/form":268,"pouchdb-browser":148,"reflex":178}],268:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -35861,4 +36044,4 @@ var view = exports.view = function view(model, address, isActive) {
   }, [(0, _reflex.thunk)('textarea', Input.viewTextarea, model.textarea, (0, _reflex.forward)(address, TextareaAction), 'rform-textarea', 'rform-textarea txt-textarea')])])])]);
 };
 
-},{"../common/attr":211,"../common/banner":212,"../common/cursor":215,"../common/input":221,"../common/lang":222,"../common/prelude":226,"../common/unknown":235,"../recipes":266,"reflex":178}]},{},[263]);
+},{"../common/attr":212,"../common/banner":213,"../common/cursor":216,"../common/input":222,"../common/lang":223,"../common/prelude":227,"../common/unknown":236,"../recipes":267,"reflex":178}]},{},[264]);
