@@ -32439,7 +32439,7 @@ var viewData = function viewData(model, address) {
       width: px(scrubberX)
     }
   }), _reflex.html.div({
-    onMouseDown: function onMouseDown() {
+    onMouseDown: function onMouseDown(event) {
       event.preventDefault();
       address(HoldScrubber);
     },
