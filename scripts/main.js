@@ -30037,7 +30037,7 @@ var readValue = exports.readValue = function readValue(model) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.onBlur = exports.onFocus = exports.decodeChangeEvent = exports.view = exports.disable = exports.enable = exports.update = exports.init = exports.Model = exports.Change = undefined;
+exports.decodeChangeEvent = exports.view = exports.disable = exports.enable = exports.update = exports.init = exports.Model = exports.Change = undefined;
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
@@ -30048,10 +30048,6 @@ var _functional = require('../lang/functional');
 var _prelude = require('../common/prelude');
 
 var _unknown = require('../common/unknown');
-
-var _focusable = require('../common/focusable');
-
-var Focus = _interopRequireWildcard(_focusable);
 
 var _editable = require('../common/editable');
 
@@ -30081,13 +30077,6 @@ var EditAction = function EditAction(action) {
   };
 };
 
-var FocusAction = function FocusAction(action) {
-  return {
-    type: "Focus",
-    focus: action
-  };
-};
-
 var ControlAction = function ControlAction(action) {
   return {
     type: "Control",
@@ -30097,10 +30086,9 @@ var ControlAction = function ControlAction(action) {
 
 // Update, init
 
-var Model = exports.Model = function Model(focus, control, value, min, max, step) {
+var Model = exports.Model = function Model(control, value, min, max, step) {
   _classCallCheck(this, Model);
 
-  this.focus = focus;
   this.control = control;
   this.value = value;
   this.min = min;
@@ -30109,15 +30097,7 @@ var Model = exports.Model = function Model(focus, control, value, min, max, step
 };
 
 var init = exports.init = function init(value, min, max, step) {
-  var isFocused = arguments.length <= 4 || arguments[4] === undefined ? false : arguments[4];
-  var isDisabled = arguments.length <= 5 || arguments[5] === undefined ? false : arguments[5];
-
-  var _Focus$init = Focus.init(isFocused);
-
-  var _Focus$init2 = _slicedToArray(_Focus$init, 2);
-
-  var focus = _Focus$init2[0];
-  var focusFx = _Focus$init2[1];
+  var isDisabled = arguments.length <= 4 || arguments[4] === undefined ? false : arguments[4];
 
   var _Control$init = Control.init(isDisabled);
 
@@ -30127,17 +30107,15 @@ var init = exports.init = function init(value, min, max, step) {
   var controlFx = _Control$init2[1];
 
 
-  var model = new Model(focus, control, value, min, max, step);
+  var model = new Model(control, value, min, max, step);
 
-  return [model, _reflex.Effects.batch([focusFx, controlFx])];
+  return [model, controlFx.map(ControlAction)];
 };
 
 var update = exports.update = function update(model, action) {
   switch (action.type) {
     case 'Change':
       return change(model, action.value);
-    case 'Focus':
-      return delegateFocusUpdate(model, action.focus);
     case 'Control':
       return delegateControlUpdate(model, action.control);
     default:
@@ -30146,7 +30124,7 @@ var update = exports.update = function update(model, action) {
 };
 
 var change = function change(model, value) {
-  return [new Model(model.focus, model.control, value, model.min, model.max, model.step), _reflex.Effects.none];
+  return [new Model(model.control, value, model.min, model.max, model.step), _reflex.Effects.none];
 };
 
 var enable = exports.enable = function enable(model) {
@@ -30166,19 +30144,7 @@ var swapControl = function swapControl(model, _ref) {
 
   var control = _ref2[0];
   var fx = _ref2[1];
-  return [new Model(model.focus, control, model.value, model.min, model.max, model.step), fx.map(ControlAction)];
-};
-
-var delegateFocusUpdate = function delegateFocusUpdate(model, action) {
-  return swapFocus(model, Focus.update(model.focus, action));
-};
-
-var swapFocus = function swapFocus(model, _ref3) {
-  var _ref4 = _slicedToArray(_ref3, 2);
-
-  var focus = _ref4[0];
-  var fx = _ref4[1];
-  return [new Model(focus, model.control, model.value, model.min, model.max, model.step), fx.map(FocusAction)];
+  return [new Model(control, model.value, model.min, model.max, model.step), fx.map(ControlAction)];
 };
 
 // View
@@ -30195,9 +30161,7 @@ var view = exports.view = function view(model, address, className) {
     onChange: function onChange(event) {
       event.preventDefault();
       address(decodeChangeEvent(event));
-    },
-    onFocus: onFocus(address),
-    onBlur: onBlur(address)
+    }
   });
 };
 
@@ -30205,10 +30169,8 @@ var decodeChangeEvent = exports.decodeChangeEvent = function decodeChangeEvent(e
   var number = Number.parseFloat(event.target.value);
   return Change(number);
 };
-var onFocus = exports.onFocus = (0, _prelude.annotate)(Focus.onFocus, FocusAction);
-var onBlur = exports.onBlur = (0, _prelude.annotate)(Focus.onBlur, FocusAction);
 
-},{"../common/control":215,"../common/editable":219,"../common/focusable":220,"../common/prelude":227,"../common/unknown":236,"../lang/functional":262,"reflex":178}],233:[function(require,module,exports){
+},{"../common/control":215,"../common/editable":219,"../common/prelude":227,"../common/unknown":236,"../lang/functional":262,"reflex":178}],233:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -33465,7 +33427,7 @@ var init = exports.init = function init(id, url, title, value, min, max, step) {
   var isDisabled = arguments.length <= 7 || arguments[7] === undefined ? false : arguments[7];
   var isFocused = arguments.length <= 8 || arguments[8] === undefined ? false : arguments[8];
 
-  var _Slider$init = Slider.init(value, min, max, step, isDisabled = false, isFocused = false);
+  var _Slider$init = Slider.init(value, min, max, step);
 
   var _Slider$init2 = _slicedToArray(_Slider$init, 2);
 
